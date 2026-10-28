@@ -519,6 +519,53 @@ not visit during a recording are never recorded, and nothing on the browser's ow
 settings) or the Recorder's own is. A tab that reloaded as you switched to it no longer loses the saves
 it sends.
 
+### Record a task in a Bot's own browser, with nothing to install
+
+A Bot's screen, opened larger from a conversation, is now a browser a person can work in: tabs, an
+address bar, back, forward and reload sit above the page. Take control and the bar is yours (typing an
+address, switching, opening and closing tabs, all from the keyboard too); while the Bot has control it
+shows where the Bot is, read only. The OpenBot Recorder is already in every Bot's browser, idle until
+someone records, so recording a task needs no extension and no Connect step.
+
+- **Record replaces "Teach a browser workflow".** Name the task, press Record, do it, press Stop. The
+  panel shows the name, the time and the step count, asks about narration before your first recording
+  (the same choice as the Browser page), and after Stop says what was saved to your Learning space. The
+  recording lands in Intelligence exactly as the Recorder sends from any browser, in your own Learning
+  space, so every Bot you use learns from it, this one included.
+- **Only you are recorded, never the Bot.** Record works only while you hold control, and handing it
+  back (or the Bot's request ending) stops the recording, with its last steps sent before the Recorder
+  disconnects; the Bot acts again only once the recording has ended. Taking control now records who
+  took it, so on a shared Bot only that person can use the bar or record, someone else's recording
+  shows only that one is running, and nobody else sees its name, its step count or its microphone.
+- **Record needs a computer the Bot does not share.** Where every Bot runs on one computer (Helm's
+  shared mode, or `AGENT_COMPUTER_URL` with no supervisor), Record is refused in every Bot's browser
+  and the panel says why: your Recorder connection would sit in the Bot's profile, where any other
+  Bot's shell could read it. The bar still works. The computer refuses it too. With a supervisor
+  (laptop, Desktop) or a Sandbox, each Bot has its own computer and Record works.
+- **One connection per recording.** Record mints a Recorder connection for the person who pressed it
+  and Stop revokes it; Settings, Browsers lists it as "<Bot>'s browser" while it lives, and says
+  "recording now" for any browser that is recording.
+- While a recording runs in a Bot's browser, that Bot's network policy also lets the Recorder reach
+  OpenBot and the Intelligence gateway, on their own ports only; the Bot's own policy returns when it
+  ends.
+- **Removed: the old "Teach a browser workflow" panel and everything behind it** (its routes under
+  `/api/demonstrations`, its instant skill draft, "Save and use with this Bot" and "Run on a schedule").
+  Skills already saved from it stay, as ordinary skills; its recordings stay in the database, unread.
+- When you take control yourself, the line under the screen no longer repeats your own request back as
+  if you had said it.
+- **What you type while you hold control stays yours.** After you hand back, the Bot reads a field you
+  filled as "filled in by the person", never its value, in its page snapshot, its page text and its
+  screenshots; a field you only tabbed through keeps the Bot's own value.
+- **A Bot's request for help shows in the conversation**, with its reason and Take control, and folds
+  into one line once answered. After you hand back, the Bot is told what you did and carries on, saying
+  what it does next; if it still stops without a word, the card says so and offers Carry on.
+- **Clear browser data.** One button beside reload, in a Bot's browser and in your own, asks "Clear this
+  browser?" and wipes it: cookies, saved passwords, history, site storage and the screenshots kept of its
+  pages. It starts fresh, signed out of everything; OpenBot's own Passwords stay. A Bot's browser can be
+  cleared only by the person holding its control. Audited as `computer.browser_cleared`.
+- Leaving a conversation while you hold a Bot's control no longer leaves it blank: the Bot's reply after
+  you hand back shows when you return, with no "A browser task is paused" notice.
+
 ### Your own browser, opened from OpenBot, with the Recorder already in it
 
 Wherever OpenBot can run a browser for you, the sidebar has a **Browser** button below Connections. It
@@ -579,7 +626,7 @@ close it, and the reason is in the server's and the computer's logs.
 - A person's browser always runs the Recorder that came with its OpenBot, even in a profile that ran an
   earlier one, and keeps it pinned to the toolbar once.
 - A Recorder that is slow to answer is refused instead of taking down the computer and every browser
-  on it. Typing on a live screen that records a demonstration reaches the page in the order typed.
+  on it. Typing on a live screen reaches the page in the order typed.
 - Opening the Browser page twice in quick succession (reloading it while your browser is still
   opening, for one) opens your browser once, connected; before, both opens could be refused, most
   often the first after the Recorder was updated. When a browser cannot be opened, the server's and
