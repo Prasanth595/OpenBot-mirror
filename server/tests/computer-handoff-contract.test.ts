@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import type { MiddlewareHandler } from "hono";
 import type {
   BrowserChallenge,
   ComputerControlState,
 } from "@openbot/shared/computer-control";
+import type { MiddlewareHandler } from "hono";
 import type { AppVariables } from "../src/auth/guards";
 import { createComputerGateway } from "../src/computer/gateway";
 import type { PolicyStore } from "../src/computer/policy-store";
@@ -35,9 +35,9 @@ function fixture(
   const requests: { path: string; init?: RequestInit }[] = [];
   const provider: ComputerProvider = {
     name: "fixture",
-    isolation: "per-bot",
+    isolation: "per-person",
     locate: async () => "http://agent-computer:4100",
-    status: async (botId) => ({ botId, state: "ready" }),
+    status: async (seat) => ({ botId: seat.botId, state: "ready" }),
     stop: async () => ({ wasRunning: true }),
     reset: async () => ({ cleared: true }),
     list: async () => [],

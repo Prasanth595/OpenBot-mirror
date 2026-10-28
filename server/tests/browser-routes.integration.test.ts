@@ -53,6 +53,7 @@ import {
   OPEN_BUDGET_MS,
   STATE_TIMEOUT_MS,
 } from "../src/browser/routes";
+import { botSeat, type ComputerSeat } from "../src/computer/computer-key";
 import { createComputerGateway } from "../src/computer/gateway";
 import { withPolicyPushOnWake } from "../src/computer/policy-network";
 import {
@@ -539,7 +540,7 @@ function ownComputers(): ComputerProvider {
       token: COMPUTER_TOKEN,
     }),
     name: "docker",
-    isolation: "per-bot",
+    isolation: "per-person",
   };
 }
 
@@ -636,12 +637,15 @@ describe("opening a person's own browser", () => {
     const started: string[] = [];
     const supervisor = {
       name: "docker",
-      isolation: "per-bot",
-      locate: async (botId: string) => {
+      isolation: "per-person",
+      locate: async ({ botId }: ComputerSeat) => {
         started.push(botId);
         return `http://127.0.0.1:${COMPUTER_PORT}`;
       },
-      status: async (botId: string) => ({ botId, state: "absent" as const }),
+      status: async ({ botId }: ComputerSeat) => ({
+        botId,
+        state: "absent" as const,
+      }),
       stop: async () => ({ wasRunning: false }),
       reset: async () => ({ cleared: false }),
       list: async () => [],
@@ -668,12 +672,15 @@ describe("opening a person's own browser", () => {
     const started: string[] = [];
     const bots = {
       name: "docker",
-      isolation: "per-bot",
-      locate: async (botId: string) => {
+      isolation: "per-person",
+      locate: async ({ botId }: ComputerSeat) => {
         started.push(botId);
         return `http://127.0.0.1:${COMPUTER_PORT}`;
       },
-      status: async (botId: string) => ({ botId, state: "absent" as const }),
+      status: async ({ botId }: ComputerSeat) => ({
+        botId,
+        state: "absent" as const,
+      }),
       stop: async () => ({ wasRunning: false }),
       reset: async () => ({ cleared: false }),
       list: async () => [],
@@ -772,24 +779,31 @@ describe("opening a person's own browser", () => {
   test("OpenBot Desktop's host-side computer carries people's browsers, while Bots' computers stay where they are", async () => {
     const bots = {
       name: "docker",
-      isolation: "per-bot",
+      isolation: "per-person",
       locate: async () => "http://127.0.0.1:4300/bot-computer",
-      status: async (botId: string) => ({ botId, state: "absent" as const }),
+      status: async ({ botId }: ComputerSeat) => ({
+        botId,
+        state: "absent" as const,
+      }),
       stop: async () => ({ wasRunning: false }),
       reset: async () => ({ cleared: false }),
       list: async () => [],
     } satisfies ComputerProvider;
     const desktop = withPersonBrowsers(bots, "http://127.0.0.1:4101");
-    expect(await desktop.locate(personBrowserId(ada.id))).toBe(
+    expect(await desktop.locate(botSeat(personBrowserId(ada.id)))).toBe(
       "http://127.0.0.1:4101",
     );
-    expect(await desktop.status(personBrowserId(ada.id))).toMatchObject({
+    expect(
+      await desktop.status(botSeat(personBrowserId(ada.id))),
+    ).toMatchObject({
       state: "ready",
     });
-    expect(await desktop.locate("agent_7")).toBe(
+    expect(await desktop.locate(botSeat("agent_7"))).toBe(
       "http://127.0.0.1:4300/bot-computer",
     );
-    expect(await desktop.status("agent_7")).toMatchObject({ state: "absent" });
+    expect(await desktop.status(botSeat("agent_7"))).toMatchObject({
+      state: "absent",
+    });
     // Without OPENBOT_BROWSER_URL the same provider carries both.
     expect(withPersonBrowsers(bots, undefined)).toBe(bots);
     // There, a person's own desktop browser goes everywhere their own browser would.
@@ -1234,7 +1248,7 @@ describe("opening a person's own browser", () => {
               baseUrl: base,
               token: COMPUTER_TOKEN,
             }),
-            isolation: "per-bot",
+            isolation: "per-person",
           },
         },
       );
@@ -1334,7 +1348,7 @@ describe("opening a person's own browser", () => {
               baseUrl: base,
               token: COMPUTER_TOKEN,
             }),
-            isolation: "per-bot",
+            isolation: "per-person",
           },
         },
       );
@@ -1364,11 +1378,25 @@ describe("opening a person's own browser", () => {
           },
         });
         expect(asked.status).toBe(503);
+        // Named with a person too, as a seat on a computer people share is: still the person's browser, still refused.
+        const seated = await fetch(`${base}${path}`, {
+          headers: {
+            "x-openbot-computer-token": COMPUTER_TOKEN,
+            "x-openbot-bot-id": personBrowserId(ada.id),
+            "x-openbot-person-id": ada.id,
+          },
+        });
+        expect(seated.status).toBe(503);
       }
-      const stream = await fetch(
-        `${base}/stream?token=${COMPUTER_TOKEN}&bot=${personBrowserId(ada.id)}`,
-      );
-      expect(stream.status).toBe(503);
+      for (const query of [
+        `bot=${personBrowserId(ada.id)}`,
+        `bot=${personBrowserId(ada.id)}&person=${ada.id}`,
+      ]) {
+        const stream = await fetch(
+          `${base}/stream?token=${COMPUTER_TOKEN}&${query}`,
+        );
+        expect(stream.status).toBe(503);
+      }
       expect(await readdir(join(dir, "profiles"))).toEqual([]);
       // A Bot is served there as before.
       expect(
@@ -1852,9 +1880,9 @@ describe("a slow page, and a browser that cannot be reached", () => {
       {
         provider: {
           name: "docker",
-          isolation: "per-bot",
+          isolation: "per-person",
           locate: async () => nowhere,
-          status: async (botId: string) => ({
+          status: async ({ botId }: ComputerSeat) => ({
             botId,
             state: "ready" as const,
           }),
@@ -2093,12 +2121,12 @@ describe("Record after the OpenBot browser is disconnected", () => {
       {
         provider: {
           name: "docker",
-          isolation: "per-bot",
-          locate: async (botId: string) => {
+          isolation: "per-person",
+          locate: async ({ botId }: ComputerSeat) => {
             started.push(botId);
             return `http://127.0.0.1:${COMPUTER_PORT}`;
           },
-          status: async (botId: string) => ({
+          status: async ({ botId }: ComputerSeat) => ({
             botId,
             state: "absent" as const,
           }),
@@ -2128,9 +2156,9 @@ describe("Record after the OpenBot browser is disconnected", () => {
       {
         provider: {
           name: "docker",
-          isolation: "per-bot",
+          isolation: "per-person",
           locate: async () => `http://127.0.0.1:${NOTHING_PORT}`,
-          status: async (botId: string) => ({
+          status: async ({ botId }: ComputerSeat) => ({
             botId,
             state: "ready" as const,
           }),
@@ -2445,10 +2473,10 @@ describe("a person's browser where every Bot shares one computer", () => {
       as: "ben",
     });
     expect(control.status).toBeGreaterThanOrEqual(400);
-    await expect(shared.gateway.locate(computerId)).rejects.toThrow(
+    await expect(shared.gateway.locate(botSeat(computerId))).rejects.toThrow(
       SHARED_COMPUTER,
     );
-    expect(await shared.gateway.status(computerId)).toMatchObject({
+    expect(await shared.gateway.status(botSeat(computerId))).toMatchObject({
       state: "absent",
     });
 
@@ -2459,14 +2487,14 @@ describe("a person's browser where every Bot shares one computer", () => {
     ).toEqual([]);
     expect(await connections()).toBe(minted);
     // A Bot's computer there is reached as before.
-    expect(await shared.gateway.locate("agent_7")).toMatch(
+    expect(await shared.gateway.locate(botSeat("agent_7"))).toMatch(
       `http://127.0.0.1:${COMPUTER_PORT}`,
     );
   });
 
   test("a computer of each one's own, and OpenBot Desktop's host-side computer, still run it", () => {
     const shared = { isolation: "shared" } as const;
-    const own = { isolation: "per-bot" } as const;
+    const own = { isolation: "per-person" } as const;
     expect(personBrowserRefusal(shared, undefined)).toBe(SHARED_COMPUTER);
     expect(personBrowserRefusal(own, undefined)).toBeNull();
     expect(personBrowserRefusal(shared, "http://127.0.0.1:4101")).toBeNull();

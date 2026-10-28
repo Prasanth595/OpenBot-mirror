@@ -13,6 +13,7 @@ import {
   sameToken,
 } from "./agents/callback-token";
 import { computerAccessCheck } from "./agents/computer-access";
+import { deploymentCanIsolate } from "./agents/isolation";
 import {
   type BotLifecycleServices,
   createBotLifecycleRoutes,
@@ -45,14 +46,14 @@ import {
 import type { IdentityProviderStore } from "./auth/identity-provider-store";
 import { desktopAuthPage } from "./auth/native-browser";
 import {
-  createAttachmentRoutes,
-  createChannelAttachmentRoutes,
-} from "./channels/attachments";
-import {
   type BrowserRouteDeps,
   browserConnectionRevoked,
   createBrowserRoutes,
 } from "./browser/routes";
+import {
+  createAttachmentRoutes,
+  createChannelAttachmentRoutes,
+} from "./channels/attachments";
 import type { ChannelEventHub } from "./channels/events";
 import { createGroupRoutes, type GroupConversations } from "./channels/group";
 import { type ChannelStore, createChannelRoutes } from "./channels/routes";
@@ -107,9 +108,9 @@ import type { SignInService } from "./passwords/service";
 import type { OnboardingStore } from "./people/onboarding";
 import { createProfileRoutes, type ProfileStore } from "./people/profile";
 import { MAX_PAGE, type PeopleStore } from "./people/store";
+import type { BrokerProvider } from "./plugins/access";
 import type { AccountModeSwitch } from "./plugins/account-mode";
 import type { ComposioBroker } from "./plugins/broker";
-import type { BrokerProvider } from "./plugins/access";
 import { createPluginRoutes } from "./plugins/routes";
 import { createSharedUseRoutes } from "./plugins/shared-use-routes";
 import type { SharedUseStore } from "./plugins/shared-use-store";
@@ -1490,6 +1491,8 @@ export function createApp(
               ].filter((url): url is URL => url !== undefined),
             }
           : undefined,
+        // Whether a Bot can have a computer of its own here: only where the provider makes computers.
+        { available: deploymentCanIsolate(config.computer) },
       ),
     );
     // Choosing a coworker for an untagged message needs the same permission-filtered roster the

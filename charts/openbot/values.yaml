@@ -327,12 +327,13 @@ config:
 # How a Bot gets a computer.
 #
 #   shared    One browser for every Bot, run by this chart. Needs nothing installed in the cluster,
-#             and is what a first install should use. Each Bot keeps its own logins and files,
-#             but a command one Bot runs can read another's files. For that reason a person's own
-#             OpenBot browser does not run here: the Browser page says so.
-#   sandbox   A computer each, as a `Sandbox` from kubernetes-sigs/agent-sandbox, suspended when
-#             idle and resumed with its logins intact. Needs that controller in the cluster. Each
-#             person's own OpenBot browser gets a computer of its own the same way.
+#             and is what a first install should use. Each person's Bots keep their own logins
+#             and files, but a command one Bot runs can read another's files. For that reason a
+#             person's own OpenBot browser does not run here: the Browser page says so.
+#   sandbox   A computer for each person, and for each Isolated Bot, as a `Sandbox` from
+#             kubernetes-sigs/agent-sandbox, suspended when idle and resumed with its logins
+#             intact. Needs that controller in the cluster. Each person's own OpenBot browser gets a
+#             computer of its own the same way.
 #   external  Neither. `url` points at a computer somebody else runs, which is shared like the
 #             first, so it runs no person's browser either.
 computers:
@@ -438,14 +439,19 @@ computers:
     # safe default; `Delete` is for a trial you want to leave no trace of.
     whenDeleted: Retain
 
+  # SIZED FOR A PERSON, NOT A BOT. A computer is one person's and runs a browser for each of their
+  # Bots in use at once, up to `maxBrowsers` (8 when empty), closing each after `browserIdleMs`
+  # untouched (30 minutes when empty). Chromium is roughly 200-500MB per browser (a little more
+  # headed, plus a few MB for Xvfb) and up to 2GB with real pages open. Running out of memory takes
+  # down every one of that person's browsers at once, so size the limit to `maxBrowsers` times what
+  # one browser takes on your Bots' sites, plus headroom; on a small node, lower `maxBrowsers` (the
+  # least recently used browser closes first) rather than the limit.
   resources:
     requests:
       cpu: 500m
-      # Chromium is roughly 200-500MB per browser (a little more headed, plus a few MB for Xvfb) and
-      # up to 2GB with real pages open.
-      memory: 1Gi
+      memory: 2Gi
     limits:
-      memory: 4Gi
+      memory: 8Gi
 
   nodeSelector: {}
   tolerations: []

@@ -4,6 +4,7 @@ import {
   type BrowserWindow,
   isPersonBrowserId,
 } from "@openbot/shared/openbot-browser";
+import { botSeat, type ComputerSeat } from "../computer/computer-key";
 import type { ComputerGateway } from "../computer/gateway";
 import {
   type EgressPolicy,
@@ -34,7 +35,7 @@ export function personBrowserRefusal(
   browserUrl: string | undefined,
 ): string | null {
   if (browserUrl || !provider) return null;
-  return provider.isolation === "per-bot" ? null : SHARED_COMPUTER;
+  return provider.isolation === "shared" ? SHARED_COMPUTER : null;
 }
 
 /**
@@ -75,33 +76,33 @@ export function withPersonBrowsers(
   const refusal = personBrowserRefusal(provider, browserUrl);
   if (refusal)
     return Object.assign(Object.create(provider) as ComputerProvider, {
-      locate: (botId: string) =>
-        isPersonBrowserId(botId)
+      locate: (seat: ComputerSeat) =>
+        isPersonBrowserId(seat.botId)
           ? Promise.reject(new ProviderError(refusal))
-          : provider.locate(botId),
+          : provider.locate(seat),
       // Absent rather than unreachable: nothing of the person's runs here, and nothing is going to.
-      status: (botId: string) =>
-        isPersonBrowserId(botId)
-          ? Promise.resolve({ botId, state: "absent" as const })
-          : provider.status(botId),
-      sessionOf: async (botId: string) =>
-        isPersonBrowserId(botId) ? undefined : provider.sessionOf?.(botId),
+      status: (seat: ComputerSeat) =>
+        isPersonBrowserId(seat.botId)
+          ? Promise.resolve({ botId: seat.botId, state: "absent" as const })
+          : provider.status(seat),
+      sessionOf: async (seat: ComputerSeat) =>
+        isPersonBrowserId(seat.botId) ? undefined : provider.sessionOf?.(seat),
     });
   if (!browserUrl) return provider;
   return Object.assign(Object.create(provider) as ComputerProvider, {
-    locate: (botId: string) =>
-      isPersonBrowserId(botId)
+    locate: (seat: ComputerSeat) =>
+      isPersonBrowserId(seat.botId)
         ? Promise.resolve(browserUrl)
-        : provider.locate(botId),
+        : provider.locate(seat),
     // A host process OpenBot Desktop keeps running with the stack: there is nothing to wake, and what the browser itself
     // is doing, the computer's own state route says.
-    status: (botId: string) =>
-      isPersonBrowserId(botId)
-        ? Promise.resolve({ botId, state: "ready" as const })
-        : provider.status(botId),
+    status: (seat: ComputerSeat) =>
+      isPersonBrowserId(seat.botId)
+        ? Promise.resolve({ botId: seat.botId, state: "ready" as const })
+        : provider.status(seat),
     // Unknown rather than the Bots' computer's run, which would say nothing about this one.
-    sessionOf: async (botId: string) =>
-      isPersonBrowserId(botId) ? undefined : provider.sessionOf?.(botId),
+    sessionOf: async (seat: ComputerSeat) =>
+      isPersonBrowserId(seat.botId) ? undefined : provider.sessionOf?.(seat),
   });
 }
 
@@ -126,9 +127,10 @@ export function gatewayBrowserComputers(
 ): BrowserComputers {
   return {
     shows: personBrowserShows(browserUrl),
-    locate: (computerId) => gateway.locate(computerId),
+    // A person's browser is a computer of its own, never a seat on the person's computer beside their Bots.
+    locate: (computerId) => gateway.locate(botSeat(computerId)),
     running: async (computerId) =>
-      (await gateway.status(computerId)).state === "ready",
+      (await gateway.status(botSeat(computerId))).state === "ready",
   };
 }
 
